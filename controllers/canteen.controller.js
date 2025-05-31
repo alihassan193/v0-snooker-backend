@@ -7,23 +7,20 @@ const CanteenCategory = db.canteenCategories
 const CanteenStock = db.canteenStocks
 const ClubManager = db.club_managers
 
-// Helper function to get user's club ID
-const getUserClubId = async (userId, userRole) => {
-  // If user is a manager, their club ID is already set in auth middleware
+// Helper function to get user's club access
+const getUserClubAccess = async (userId, userRole) => {
   if (userRole === "manager") {
-    return null // Will use req.userClubId from auth middleware
-  }
-
-  // If user is sub_admin, get all clubs they manage
-  if (userRole === "sub_admin") {
+    const clubManager = await ClubManager.findOne({
+      where: { manager_id: userId, is_active: true },
+    })
+    return clubManager ? [clubManager.club_id] : []
+  } else if (userRole === "sub_admin") {
     const clubManagers = await ClubManager.findAll({
       where: { admin_id: userId, is_active: true },
     })
     return clubManagers.map((cm) => cm.club_id)
   }
-
-  // Super admin can access all clubs
-  return null
+  return null // Super admin has access to all
 }
 
 // Create canteen item
@@ -37,15 +34,9 @@ exports.createCanteenItem = async (req, res) => {
     }
 
     // Check if user has access to this club
-    if (req.userRole === "manager") {
-      if (req.userClubId !== Number.parseInt(club_id)) {
-        return errorResponse(res, "You can only create items for your assigned club", 403)
-      }
-    } else if (req.userRole === "sub_admin") {
-      const managedClubs = await getUserClubId(req.userId, req.userRole)
-      if (!managedClubs.includes(Number.parseInt(club_id))) {
-        return errorResponse(res, "You can only create items for clubs you manage", 403)
-      }
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(Number.parseInt(club_id))) {
+      return errorResponse(res, "You can only create items for clubs you manage", 403)
     }
 
     // Verify category exists
@@ -110,29 +101,24 @@ exports.getAllCanteenItems = async (req, res) => {
     if (category_id) whereClause.category_id = category_id
     if (is_available !== undefined) whereClause.is_available = is_available === "true"
 
-    // Filter by club_id based on user role
-    if (req.userRole === "manager") {
-      // Managers can only see items from their assigned club
-      whereClause.club_id = req.userClubId
-    } else if (req.userRole === "sub_admin") {
-      // Sub-admins can see items from clubs they manage
+    // Get user's club access
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+
+    if (userClubAccess) {
+      // Manager or sub-admin - filter by accessible clubs
       if (club_id) {
         // If specific club_id is requested, verify access
-        const managedClubs = await getUserClubId(req.userId, req.userRole)
-        if (!managedClubs.includes(Number.parseInt(club_id))) {
+        if (!userClubAccess.includes(Number.parseInt(club_id))) {
           return errorResponse(res, "You can only view items for clubs you manage", 403)
         }
         whereClause.club_id = club_id
       } else {
-        // Otherwise, show items from all managed clubs
-        const managedClubs = await getUserClubId(req.userId, req.userRole)
-        whereClause.club_id = { [db.Sequelize.Op.in]: managedClubs }
+        // Show items from all accessible clubs
+        whereClause.club_id = { [db.Sequelize.Op.in]: userClubAccess }
       }
-    } else if (req.userRole === "super_admin") {
-      // Super admin can see all items, optionally filtered by club_id
-      if (club_id) {
-        whereClause.club_id = club_id
-      }
+    } else if (club_id) {
+      // Super admin with specific club filter
+      whereClause.club_id = club_id
     }
 
     const offset = (page - 1) * limit
@@ -206,15 +192,9 @@ exports.getCanteenItemById = async (req, res) => {
     }
 
     // Check if user has access to this item's club
-    if (req.userRole === "manager") {
-      if (item.club_id !== req.userClubId) {
-        return errorResponse(res, "You can only view items from your assigned club", 403)
-      }
-    } else if (req.userRole === "sub_admin") {
-      const managedClubs = await getUserClubId(req.userId, req.userRole)
-      if (!managedClubs.includes(item.club_id)) {
-        return errorResponse(res, "You can only view items from clubs you manage", 403)
-      }
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(item.club_id)) {
+      return errorResponse(res, "You can only view items from clubs you manage", 403)
     }
 
     return successResponse(res, "Canteen item retrieved successfully", item)
@@ -237,15 +217,9 @@ exports.updateCanteenItem = async (req, res) => {
     }
 
     // Check if user has access to this item's club
-    if (req.userRole === "manager") {
-      if (item.club_id !== req.userClubId) {
-        return errorResponse(res, "You can only update items from your assigned club", 403)
-      }
-    } else if (req.userRole === "sub_admin") {
-      const managedClubs = await getUserClubId(req.userId, req.userRole)
-      if (!managedClubs.includes(item.club_id)) {
-        return errorResponse(res, "You can only update items from clubs you manage", 403)
-      }
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(item.club_id)) {
+      return errorResponse(res, "You can only update items from clubs you manage", 403)
     }
 
     // Verify category exists if changing
@@ -307,15 +281,9 @@ exports.deleteCanteenItem = async (req, res) => {
     }
 
     // Check if user has access to this item's club
-    if (req.userRole === "manager") {
-      if (item.club_id !== req.userClubId) {
-        return errorResponse(res, "You can only delete items from your assigned club", 403)
-      }
-    } else if (req.userRole === "sub_admin") {
-      const managedClubs = await getUserClubId(req.userId, req.userRole)
-      if (!managedClubs.includes(item.club_id)) {
-        return errorResponse(res, "You can only delete items from clubs you manage", 403)
-      }
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(item.club_id)) {
+      return errorResponse(res, "You can only delete items from clubs you manage", 403)
     }
 
     // Delete associated stock records first
@@ -391,15 +359,9 @@ exports.updateStock = async (req, res) => {
     }
 
     // Check if user has access to this item's club
-    if (req.userRole === "manager") {
-      if (item.club_id !== req.userClubId) {
-        return errorResponse(res, "You can only update stock for items from your assigned club", 403)
-      }
-    } else if (req.userRole === "sub_admin") {
-      const managedClubs = await getUserClubId(req.userId, req.userRole)
-      if (!managedClubs.includes(item.club_id)) {
-        return errorResponse(res, "You can only update stock for items from clubs you manage", 403)
-      }
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(item.club_id)) {
+      return errorResponse(res, "You can only update stock for items from clubs you manage", 403)
     }
 
     // Get current stock
@@ -473,29 +435,24 @@ exports.getLowStockItems = async (req, res) => {
     // Build where clause based on user role and club access
     const whereClause = {}
 
-    // Filter by club_id based on user role
-    if (req.userRole === "manager") {
-      // Managers can only see items from their assigned club
-      whereClause.club_id = req.userClubId
-    } else if (req.userRole === "sub_admin") {
-      // Sub-admins can see items from clubs they manage
+    // Get user's club access
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+
+    if (userClubAccess) {
+      // Manager or sub-admin - filter by accessible clubs
       if (club_id) {
         // If specific club_id is requested, verify access
-        const managedClubs = await getUserClubId(req.userId, req.userRole)
-        if (!managedClubs.includes(Number.parseInt(club_id))) {
+        if (!userClubAccess.includes(Number.parseInt(club_id))) {
           return errorResponse(res, "You can only view items for clubs you manage", 403)
         }
         whereClause.club_id = club_id
       } else {
-        // Otherwise, show items from all managed clubs
-        const managedClubs = await getUserClubId(req.userId, req.userRole)
-        whereClause.club_id = { [db.Sequelize.Op.in]: managedClubs }
+        // Show items from all accessible clubs
+        whereClause.club_id = { [db.Sequelize.Op.in]: userClubAccess }
       }
-    } else if (req.userRole === "super_admin") {
-      // Super admin can see all items, optionally filtered by club_id
-      if (club_id) {
-        whereClause.club_id = club_id
-      }
+    } else if (club_id) {
+      // Super admin with specific club filter
+      whereClause.club_id = club_id
     }
 
     // Find all stock records where quantity is below min_stock_level

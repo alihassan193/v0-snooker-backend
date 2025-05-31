@@ -6,11 +6,39 @@ const Invoice = db.invoices
 const InvoiceItem = db.invoiceItems
 const Session = db.sessions
 const Player = db.players
+const ClubManager = db.club_managers
+
+// Helper function to get user's club access
+const getUserClubAccess = async (userId, userRole) => {
+  if (userRole === "manager") {
+    const clubManager = await ClubManager.findOne({
+      where: { manager_id: userId, is_active: true },
+    })
+    return clubManager ? [clubManager.club_id] : []
+  } else if (userRole === "sub_admin") {
+    const clubManagers = await ClubManager.findAll({
+      where: { admin_id: userId, is_active: true },
+    })
+    return clubManagers.map((cm) => cm.club_id)
+  }
+  return null // Super admin has access to all
+}
 
 // Create invoice
 exports.createInvoice = async (req, res) => {
   try {
-    const { player_id, session_id, items, tax_rate = 0, discount = 0 } = req.body
+    const { player_id, session_id, items, tax_rate = 0, discount = 0, club_id } = req.body
+
+    // Validate club_id
+    if (!club_id) {
+      return errorResponse(res, "Club ID is required", 400)
+    }
+
+    // Check if user has access to this club
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(Number.parseInt(club_id))) {
+      return errorResponse(res, "You can only create invoices for clubs you manage", 403)
+    }
 
     // Calculate totals
     let subtotal = 0
@@ -30,7 +58,7 @@ exports.createInvoice = async (req, res) => {
       discount,
       total_amount,
       status: "pending",
-      club_id: req.user.club_id,
+      club_id,
     })
 
     // Create invoice items if provided
@@ -46,8 +74,28 @@ exports.createInvoice = async (req, res) => {
       await InvoiceItem.bulkCreate(invoiceItems)
     }
 
-    logger.info(`Invoice created: ${invoice.id} by user: ${req.user.id}`)
-    return successResponse(res, "Invoice created successfully", invoice, 201)
+    // Get complete invoice data
+    const completeInvoice = await Invoice.findByPk(invoice.id, {
+      include: [
+        {
+          model: Player,
+          as: "player",
+          attributes: ["id", "name", "email", "phone"],
+        },
+        {
+          model: InvoiceItem,
+          as: "items",
+        },
+        {
+          model: db.clubs,
+          as: "club",
+          attributes: ["id", "name"],
+        },
+      ],
+    })
+
+    logger.info(`Invoice created: ${invoice.id} by user: ${req.userId}`)
+    return successResponse(res, "Invoice created successfully", completeInvoice, 201)
   } catch (error) {
     logger.error("Error creating invoice:", error)
     return errorResponse(res, "Failed to create invoice", 500)
@@ -57,11 +105,31 @@ exports.createInvoice = async (req, res) => {
 // Get all invoices
 exports.getAllInvoices = async (req, res) => {
   try {
-    const { status, player_id, page = 1, limit = 10 } = req.query
+    const { status, player_id, page = 1, limit = 10, club_id } = req.query
 
-    const whereClause = { club_id: req.user.club_id }
+    const whereClause = {}
     if (status) whereClause.status = status
     if (player_id) whereClause.player_id = player_id
+
+    // Get user's club access
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+
+    if (userClubAccess) {
+      // Manager or sub-admin - filter by accessible clubs
+      if (club_id) {
+        // If specific club_id is requested, verify access
+        if (!userClubAccess.includes(Number.parseInt(club_id))) {
+          return errorResponse(res, "You can only view invoices for clubs you manage", 403)
+        }
+        whereClause.club_id = club_id
+      } else {
+        // Show invoices from all accessible clubs
+        whereClause.club_id = { [db.Sequelize.Op.in]: userClubAccess }
+      }
+    } else if (club_id) {
+      // Super admin with specific club filter
+      whereClause.club_id = club_id
+    }
 
     const offset = (page - 1) * limit
 
@@ -76,6 +144,11 @@ exports.getAllInvoices = async (req, res) => {
         {
           model: InvoiceItem,
           as: "items",
+        },
+        {
+          model: db.clubs,
+          as: "club",
+          attributes: ["id", "name"],
         },
       ],
       order: [["created_at", "DESC"]],
@@ -103,8 +176,7 @@ exports.getInvoiceById = async (req, res) => {
   try {
     const { id } = req.params
 
-    const invoice = await Invoice.findOne({
-      where: { id, club_id: req.user.club_id },
+    const invoice = await Invoice.findByPk(id, {
       include: [
         {
           model: Player,
@@ -118,13 +190,24 @@ exports.getInvoiceById = async (req, res) => {
         {
           model: Session,
           as: "session",
-          attributes: ["id", "start_time", "end_time", "total_cost"],
+          attributes: ["id", "start_time", "end_time", "total_amount"],
+        },
+        {
+          model: db.clubs,
+          as: "club",
+          attributes: ["id", "name"],
         },
       ],
     })
 
     if (!invoice) {
       return errorResponse(res, "Invoice not found", 404)
+    }
+
+    // Check if user has access to this invoice's club
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(invoice.club_id)) {
+      return errorResponse(res, "You can only view invoices for clubs you manage", 403)
     }
 
     return successResponse(res, "Invoice retrieved successfully", invoice)
@@ -144,12 +227,16 @@ exports.updateInvoiceStatus = async (req, res) => {
       return errorResponse(res, "Invalid status. Must be: pending, paid, or cancelled", 400)
     }
 
-    const invoice = await Invoice.findOne({
-      where: { id, club_id: req.user.club_id },
-    })
+    const invoice = await Invoice.findByPk(id)
 
     if (!invoice) {
       return errorResponse(res, "Invoice not found", 404)
+    }
+
+    // Check if user has access to this invoice's club
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(invoice.club_id)) {
+      return errorResponse(res, "You can only update invoices for clubs you manage", 403)
     }
 
     const updateData = { status }
@@ -160,11 +247,24 @@ exports.updateInvoiceStatus = async (req, res) => {
       }
     }
 
-    await Invoice.update(updateData, { where: { id, club_id: req.user.club_id } })
+    await Invoice.update(updateData, { where: { id } })
 
-    const updatedInvoice = await Invoice.findByPk(id)
+    const updatedInvoice = await Invoice.findByPk(id, {
+      include: [
+        {
+          model: Player,
+          as: "player",
+          attributes: ["id", "name", "email", "phone"],
+        },
+        {
+          model: db.clubs,
+          as: "club",
+          attributes: ["id", "name"],
+        },
+      ],
+    })
 
-    logger.info(`Invoice status updated: ${id} to ${status} by user: ${req.user.id}`)
+    logger.info(`Invoice status updated: ${id} to ${status} by user: ${req.userId}`)
     return successResponse(res, "Invoice status updated successfully", updatedInvoice)
   } catch (error) {
     logger.error("Error updating invoice status:", error)
@@ -177,21 +277,25 @@ exports.deleteInvoice = async (req, res) => {
   try {
     const { id } = req.params
 
-    const invoice = await Invoice.findOne({
-      where: { id, club_id: req.user.club_id },
-    })
+    const invoice = await Invoice.findByPk(id)
 
     if (!invoice) {
       return errorResponse(res, "Invoice not found", 404)
+    }
+
+    // Check if user has access to this invoice's club
+    const userClubAccess = await getUserClubAccess(req.userId, req.userRole)
+    if (userClubAccess && !userClubAccess.includes(invoice.club_id)) {
+      return errorResponse(res, "You can only delete invoices for clubs you manage", 403)
     }
 
     if (invoice.status === "paid") {
       return errorResponse(res, "Cannot delete paid invoice", 400)
     }
 
-    await Invoice.destroy({ where: { id, club_id: req.user.club_id } })
+    await Invoice.destroy({ where: { id } })
 
-    logger.info(`Invoice deleted: ${id} by user: ${req.user.id}`)
+    logger.info(`Invoice deleted: ${id} by user: ${req.userId}`)
     return successResponse(res, "Invoice deleted successfully")
   } catch (error) {
     logger.error("Error deleting invoice:", error)
