@@ -1,5 +1,5 @@
 module.exports = (sequelize, Sequelize) => {
-  const Club = sequelize.define("clubs", {
+  const Club = sequelize.define('clubs', {
     name: {
       type: Sequelize.STRING,
       allowNull: false,
@@ -23,6 +23,11 @@ module.exports = (sequelize, Sequelize) => {
     opening_hours: {
       type: Sequelize.JSON,
     },
+    // In your clubs model
+    code_prefix: {
+      type: Sequelize.STRING(5),
+      defaultValue: 'SNK', // Example default prefix
+    },
     description: {
       type: Sequelize.TEXT,
     },
@@ -30,8 +35,8 @@ module.exports = (sequelize, Sequelize) => {
       type: Sequelize.INTEGER,
       allowNull: false,
       references: {
-        model: "users",
-        key: "id",
+        model: 'users',
+        key: 'id',
       },
     },
   })

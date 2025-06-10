@@ -25,4 +25,9 @@ module.exports = app => {
     [authJwt.verifyToken, authJwt.isManagerOrAdmin, validateIdParam],
     controller.updateTableStatus
   )
+  app.put(
+    '/api/tables/:id/pricing',
+    [authJwt.verifyToken, authJwt.isManagerOrAdmin, validateIdParam],
+    controller.setTablePricing
+  )
 }

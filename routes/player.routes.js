@@ -1,20 +1,20 @@
-const authJwt = require("../middleware/auth")
-const controller = require("../controllers/player.controller")
-const { validateIdParam } = require("../middleware/validation")
+const authJwt = require('../middleware/auth')
+const controller = require('../controllers/player.controller')
+const { validateIdParam } = require('../middleware/validation')
 
-module.exports = (app) => {
+module.exports = app => {
   // Player management routes
-  app.post("/api/players", [authJwt.verifyToken], controller.createPlayer)
+  app.post('/api/players', [authJwt.verifyToken], controller.createPlayer)
 
-  app.get("/api/players", [authJwt.verifyToken], controller.getAllPlayers)
+  app.get('/api/players', [authJwt.verifyToken], controller.getAllPlayers)
 
-  app.get("/api/players/:id", [authJwt.verifyToken, validateIdParam], controller.getPlayerById)
+  app.get('/api/players/search?:query', [authJwt.verifyToken], controller.searchPlayers)
 
-  app.put("/api/players/:id", [authJwt.verifyToken, validateIdParam], controller.updatePlayer)
+  app.get('/api/players/:id', [authJwt.verifyToken, validateIdParam], controller.getPlayerById)
 
-  app.delete("/api/players/:id", [authJwt.verifyToken, validateIdParam], controller.deletePlayer)
+  app.put('/api/players/:id', [authJwt.verifyToken, validateIdParam], controller.updatePlayer)
 
-  app.get("/api/players/search/:query", [authJwt.verifyToken], controller.searchPlayers)
+  app.delete('/api/players/:id', [authJwt.verifyToken, validateIdParam], controller.deletePlayer)
 
-  app.get("/api/players/:id/sessions", [authJwt.verifyToken, validateIdParam], controller.getPlayerSessions)
+  app.get('/api/players/:id/sessions', [authJwt.verifyToken, validateIdParam], controller.getPlayerSessions)
 }

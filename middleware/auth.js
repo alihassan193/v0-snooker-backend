@@ -148,6 +148,7 @@ const canManageCanteen = async (req, res, next) => {
     res.status(500).send({
       message: 'Unable to validate user permission!',
     })
+    consol.error('Manage canteen', error)
   }
 }
 
