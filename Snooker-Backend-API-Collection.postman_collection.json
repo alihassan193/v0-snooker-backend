@@ -1,0 +1,1916 @@
+{
+  "info": {
+    "name": "Snooker Backend API Collection",
+    "description": "Complete API collection for Snooker Management System",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-refresh token if expired",
+          "const token = pm.environment.get('accessToken');",
+          "if (!token) {",
+          "    console.log('No access token found');",
+          "    return;",
+          "}",
+          "",
+          "// Check if token is expired (basic check)",
+          "try {",
+          "    const payload = JSON.parse(atob(token.split('.')[1]));",
+          "    const now = Math.floor(Date.now() / 1000);",
+          "    if (payload.exp && payload.exp < now) {",
+          "        console.log('Token expired, attempting refresh...');",
+          "        // Token refresh logic would go here",
+          "    }",
+          "} catch (e) {",
+          "    console.log('Error parsing token:', e);",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Sign Up",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has success property', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('success');",
+                  "    pm.expect(jsonData.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test('Response contains user data', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('id');",
+                  "    pm.expect(jsonData.data).to.have.property('username');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"sub_admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signup",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signup"]
+            }
+          }
+        },
+        {
+          "name": "Sign In",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response contains tokens', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.data).to.have.property('accessToken');",
+                  "    pm.expect(jsonData.data).to.have.property('refreshToken');",
+                  "    ",
+                  "    // Store tokens in environment",
+                  "    pm.environment.set('accessToken', jsonData.data.accessToken);",
+                  "    pm.environment.set('refreshToken', jsonData.data.refreshToken);",
+                  "    pm.environment.set('userId', jsonData.data.user.id);",
+                  "    pm.environment.set('userRole', jsonData.data.user.role);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/signin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "signin"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh-token"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Management",
+      "item": [
+        {
+          "name": "Create Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"subadmin1\",\n  \"email\": \"subadmin1@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"sub_admin\",\n  \"can_manage_tables\": true,\n  \"can_manage_canteen\": true,\n  \"can_view_reports\": true,\n  \"club_ids\": [1, 2]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/create-admin",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "create-admin"]
+            }
+          }
+        },
+        {
+          "name": "Create Manager",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"manager1\",\n  \"email\": \"manager1@example.com\",\n  \"password\": \"password123\",\n  \"club_id\": 1,\n  \"can_manage_tables\": false,\n  \"can_manage_canteen\": true,\n  \"can_view_reports\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/create-manager",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "create-manager"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Get All Admins",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/admins",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "admins"]
+            }
+          }
+        },
+        {
+          "name": "Get Admin by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/admins/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "admins", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update Admin",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"updatedadmin\",\n  \"email\": \"updatedadmin@example.com\",\n  \"can_manage_tables\": true,\n  \"can_manage_canteen\": false,\n  \"can_view_reports\": true,\n  \"club_ids\": [1]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/admins/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "admins", "1"]
+            }
+          }
+        },
+        {
+          "name": "Update User Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "users", "1"]
+            }
+          }
+        },
+        {
+          "name": "Delete Admin",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/admins/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "admins", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Managed Clubs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/managed-clubs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "managed-clubs"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Club Management",
+      "item": [
+        {
+          "name": "Create Club",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('clubId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Elite Snooker Club\",\n  \"address\": \"123 Main Street, City\",\n  \"phone\": \"+1234567890\",\n  \"email\": \"info@elitesnooker.com\",\n  \"description\": \"Premium snooker club with professional tables\",\n  \"opening_hours\": \"9:00 AM - 11:00 PM\",\n  \"facilities\": [\"Professional Tables\", \"Canteen\", \"Parking\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clubs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clubs"]
+            }
+          }
+        },
+        {
+          "name": "Get All Clubs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clubs",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clubs"]
+            }
+          }
+        },
+        {
+          "name": "Get Club by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clubs/{{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clubs", "{{clubId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Club",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Elite Snooker Club Updated\",\n  \"address\": \"456 Updated Street, City\",\n  \"phone\": \"+1234567891\",\n  \"email\": \"updated@elitesnooker.com\",\n  \"description\": \"Updated premium snooker club\",\n  \"opening_hours\": \"8:00 AM - 12:00 AM\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/clubs/{{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clubs", "{{clubId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Club",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/clubs/{{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "clubs", "{{clubId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Table Management",
+      "item": [
+        {
+          "name": "Create Table",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('tableId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": {{clubId}},\n  \"table_number\": \"T001\",\n  \"table_type\": \"professional\",\n  \"status\": \"available\",\n  \"hourly_rate\": 25.00,\n  \"description\": \"Professional snooker table with premium cloth\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tables",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables"]
+            }
+          }
+        },
+        {
+          "name": "Get All Tables",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tables?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Available Tables",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tables/available?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables", "available"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Table by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tables/{{tableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables", "{{tableId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Table",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_number\": \"T001-Updated\",\n  \"table_type\": \"professional\",\n  \"hourly_rate\": 30.00,\n  \"description\": \"Updated professional snooker table\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tables/{{tableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables", "{{tableId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Table Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"occupied\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tables/{{tableId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables", "{{tableId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Set Table Pricing",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"game_type_id\": 1,\n  \"hourly_rate\": 35.00,\n  \"peak_hour_rate\": 45.00,\n  \"weekend_rate\": 40.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tables/{{tableId}}/pricing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables", "{{tableId}}", "pricing"]
+            }
+          }
+        },
+        {
+          "name": "Delete Table",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/tables/{{tableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "tables", "{{tableId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Player Management",
+      "item": [
+        {
+          "name": "Create Player",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('playerId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": {{clubId}},\n  \"first_name\": \"John\",\n  \"last_name\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"membership_type\": \"premium\",\n  \"date_of_birth\": \"1990-01-15\",\n  \"address\": \"123 Player Street\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players"]
+            }
+          }
+        },
+        {
+          "name": "Get All Players",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/players?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search Players",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/search?query=John",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players", "search"],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "John"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Player by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players", "{{playerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Player",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"first_name\": \"John Updated\",\n  \"last_name\": \"Doe Updated\",\n  \"email\": \"john.updated@example.com\",\n  \"phone\": \"+1234567891\",\n  \"membership_type\": \"vip\",\n  \"address\": \"456 Updated Player Street\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players", "{{playerId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Player Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players", "{{playerId}}", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Delete Player",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/players/{{playerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "players", "{{playerId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session Management",
+      "item": [
+        {
+          "name": "Start Session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('sessionId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_id\": {{tableId}},\n  \"player_id\": {{playerId}},\n  \"game_type\": \"snooker\",\n  \"estimated_duration\": 120,\n  \"notes\": \"Regular practice session\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Get All Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Active Sessions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/active?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "active"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Session by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}"]
+            }
+          }
+        },
+        {
+          "name": "End Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Session completed successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}/end",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}", "end"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Enhanced Session Management",
+      "item": [
+        {
+          "name": "Start Enhanced Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_id\": {{tableId}},\n  \"player_id\": {{playerId}},\n  \"game_type_id\": 1,\n  \"estimated_duration\": 120,\n  \"notes\": \"Enhanced session with real-time tracking\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/start",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "start"]
+            }
+          }
+        },
+        {
+          "name": "Add Canteen Order to Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": {{sessionId}},\n  \"items\": [\n    {\n      \"canteen_item_id\": 1,\n      \"quantity\": 2\n    },\n    {\n      \"canteen_item_id\": 2,\n      \"quantity\": 1\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/canteen-order",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "canteen-order"]
+            }
+          }
+        },
+        {
+          "name": "Get Session Canteen Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}/canteen-orders",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}", "canteen-orders"]
+            }
+          }
+        },
+        {
+          "name": "End Enhanced Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 5.00,\n  \"notes\": \"Enhanced session completed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}/end",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}", "end"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Real-time Session Tracking",
+      "item": [
+        {
+          "name": "Get Session Real-time Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}/realtime",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}", "realtime"]
+            }
+          }
+        },
+        {
+          "name": "Pause Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Player break\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}/pause",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}", "pause"]
+            }
+          }
+        },
+        {
+          "name": "Resume Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/sessions/{{sessionId}}/resume",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "sessions", "{{sessionId}}", "resume"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Game Pricing",
+      "item": [
+        {
+          "name": "Create Game Pricing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": {{clubId}},\n  \"game_type\": \"snooker\",\n  \"table_type\": \"professional\",\n  \"hourly_rate\": 25.00,\n  \"peak_hour_rate\": 35.00,\n  \"weekend_rate\": 30.00,\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/game-pricing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-pricing"]
+            }
+          }
+        },
+        {
+          "name": "Get All Game Pricings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/game-pricing?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-pricing"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Game Types",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/game-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-types"]
+            }
+          }
+        },
+        {
+          "name": "Create Game Type",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"8-Ball Pool\",\n  \"description\": \"Standard 8-ball pool game\",\n  \"max_players\": 2,\n  \"estimated_duration\": 60\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/game-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-types"]
+            }
+          }
+        },
+        {
+          "name": "Set Table Pricing",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_id\": {{tableId}},\n  \"game_type_id\": 1,\n  \"hourly_rate\": 30.00,\n  \"peak_hour_rate\": 40.00,\n  \"weekend_rate\": 35.00\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/game-pricing/set-table-pricing",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-pricing", "set-table-pricing"]
+            }
+          }
+        },
+        {
+          "name": "Get Table Pricing",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/game-pricing/table/{{tableId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-pricing", "table", "{{tableId}}"]
+            }
+          }
+        },
+        {
+          "name": "Calculate Session Cost",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"table_id\": {{tableId}},\n  \"game_type_id\": 1,\n  \"start_time\": \"2024-01-15T10:00:00Z\",\n  \"end_time\": \"2024-01-15T12:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/game-pricing/calculate-cost",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "game-pricing", "calculate-cost"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Canteen Management",
+      "item": [
+        {
+          "name": "Create Canteen Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('canteenItemId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": {{clubId}},\n  \"name\": \"Coffee\",\n  \"description\": \"Fresh brewed coffee\",\n  \"price\": 3.50,\n  \"category\": \"beverages\",\n  \"stock_quantity\": 100,\n  \"is_available\": true,\n  \"image_url\": \"https://example.com/coffee.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/items",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "items"]
+            }
+          }
+        },
+        {
+          "name": "Get All Canteen Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/items?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "items"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Canteen Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/items/{{canteenItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "items", "{{canteenItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Canteen Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Premium Coffee\",\n  \"description\": \"Premium fresh brewed coffee\",\n  \"price\": 4.00,\n  \"stock_quantity\": 150,\n  \"is_available\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/items/{{canteenItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "items", "{{canteenItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Canteen Categories",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Create Canteen Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Snacks\",\n  \"description\": \"Light snacks and appetizers\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/categories",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "categories"]
+            }
+          }
+        },
+        {
+          "name": "Update Stock",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"stock_quantity\": 200,\n  \"reorder_level\": 20\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/stock/{{canteenItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "stock", "{{canteenItemId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Low Stock Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/low-stock?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "low-stock"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Canteen Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/items/{{canteenItemId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "items", "{{canteenItemId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Canteen Invoicing",
+      "item": [
+        {
+          "name": "Create Canteen Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('canteenInvoiceId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": {{clubId}},\n  \"customer_name\": \"Walk-in Customer\",\n  \"customer_phone\": \"+1234567890\",\n  \"customer_email\": \"customer@example.com\",\n  \"items\": [\n    {\n      \"canteen_item_id\": {{canteenItemId}},\n      \"quantity\": 2\n    }\n  ],\n  \"payment_method\": \"cash\",\n  \"discount_amount\": 0,\n  \"notes\": \"Canteen only purchase\",\n  \"is_guest\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/invoice",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "invoice"]
+            }
+          }
+        },
+        {
+          "name": "Create Quick Sale",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"club_id\": {{clubId}},\n  \"canteen_item_id\": {{canteenItemId}},\n  \"quantity\": 1,\n  \"customer_name\": \"Quick Sale Customer\",\n  \"payment_method\": \"cash\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/quick-sale",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "quick-sale"]
+            }
+          }
+        },
+        {
+          "name": "Get Canteen Sales Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/canteen/{{clubId}}/sales-report?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "canteen", "{{clubId}}", "sales-report"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoice Management",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.environment.set('invoiceId', jsonData.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_id\": {{sessionId}},\n  \"club_id\": {{clubId}},\n  \"customer_name\": \"John Doe\",\n  \"customer_phone\": \"+1234567890\",\n  \"customer_email\": \"john.doe@example.com\",\n  \"payment_method\": \"card\",\n  \"discount_amount\": 5.00,\n  \"notes\": \"Session invoice with discount\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices"]
+            }
+          }
+        },
+        {
+          "name": "Get All Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices?club_id={{clubId}}&status=pending",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Invoice Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_status\": \"paid\",\n  \"payment_method\": \"card\",\n  \"notes\": \"Payment completed successfully\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/invoices/{{invoiceId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "invoices", "{{invoiceId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/dashboard?club_id={{clubId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "dashboard"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Revenue Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/revenue?club_id={{clubId}}&startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "revenue"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Session Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/sessions?club_id={{clubId}}&startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "sessions"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Player Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "x-access-token",
+                "value": "{{accessToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/reports/players?club_id={{clubId}}&startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "reports", "players"],
+              "query": [
+                {
+                  "key": "club_id",
+                  "value": "{{clubId}}"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
