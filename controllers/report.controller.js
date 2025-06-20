@@ -37,8 +37,16 @@ exports.getDashboardStats = async (req, res) => {
       whereCondition.club_id = club.id
     }
     // For others (super_admin, etc.) use provided club_id if available
-    else if (req.user.club_id) {
-      whereCondition.club_id = req.user.club_id
+    else {
+      const club = await db.club_managers.findOne({
+        where: { manager_id: userId },
+      })
+      // console.log('Club of Manager = ', club.club_id)
+      if (!club) {
+        return errorResponse(res, 'No club assigned to this sub-admin', 400)
+      }
+      whereCondition.club_id = club.club_id
+      // whereCondition.club_id = req.user.club_id
     }
 
     // Total sessions

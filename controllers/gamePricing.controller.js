@@ -1,6 +1,6 @@
-const db = require("../models")
-const { successResponse, errorResponse } = require("../utils/responseHelper")
-const logger = require("../utils/logger")
+const db = require('../models')
+const { successResponse, errorResponse } = require('../utils/responseHelper')
+const logger = require('../utils/logger')
 
 const GamePricing = db.gamePricings
 const GameType = db.gameTypes
@@ -20,10 +20,10 @@ exports.createGamePricing = async (req, res) => {
     })
 
     logger.info(`Game pricing created: ${gamePricing.id} by user: ${req.user.id}`)
-    return successResponse(res, "Game pricing created successfully", gamePricing, 201)
+    return successResponse(res, 'Game pricing created successfully', gamePricing, 201)
   } catch (error) {
-    logger.error("Error creating game pricing:", error)
-    return errorResponse(res, "Failed to create game pricing", 500)
+    logger.error('Error creating game pricing:', error)
+    return errorResponse(res, 'Failed to create game pricing', 500)
   }
 }
 
@@ -35,16 +35,16 @@ exports.getAllGamePricings = async (req, res) => {
       include: [
         {
           model: GameType,
-          as: "gameType",
+          as: 'gameType',
         },
       ],
-      order: [["effective_from", "DESC"]],
+      order: [['effective_from', 'DESC']],
     })
 
-    return successResponse(res, "Game pricings retrieved successfully", gamePricings)
+    return successResponse(res, 'Game pricings retrieved successfully', gamePricings)
   } catch (error) {
-    logger.error("Error getting game pricings:", error)
-    return errorResponse(res, "Failed to get game pricings", 500)
+    logger.error('Error getting game pricings:', error)
+    return errorResponse(res, 'Failed to get game pricings', 500)
   }
 }
 
@@ -58,19 +58,19 @@ exports.getGamePricingById = async (req, res) => {
       include: [
         {
           model: GameType,
-          as: "gameType",
+          as: 'gameType',
         },
       ],
     })
 
     if (!gamePricing) {
-      return errorResponse(res, "Game pricing not found", 404)
+      return errorResponse(res, 'Game pricing not found', 404)
     }
 
-    return successResponse(res, "Game pricing retrieved successfully", gamePricing)
+    return successResponse(res, 'Game pricing retrieved successfully', gamePricing)
   } catch (error) {
-    logger.error("Error getting game pricing:", error)
-    return errorResponse(res, "Failed to get game pricing", 500)
+    logger.error('Error getting game pricing:', error)
+    return errorResponse(res, 'Failed to get game pricing', 500)
   }
 }
 
@@ -85,7 +85,7 @@ exports.updateGamePricing = async (req, res) => {
     })
 
     if (!gamePricing) {
-      return errorResponse(res, "Game pricing not found", 404)
+      return errorResponse(res, 'Game pricing not found', 404)
     }
 
     await GamePricing.update(
@@ -96,23 +96,23 @@ exports.updateGamePricing = async (req, res) => {
         price_per_game,
         effective_from,
       },
-      { where: { id, club_id: req.user.club_id } },
+      { where: { id, club_id: req.user.club_id } }
     )
 
     const updatedGamePricing = await GamePricing.findByPk(id, {
       include: [
         {
           model: GameType,
-          as: "gameType",
+          as: 'gameType',
         },
       ],
     })
 
     logger.info(`Game pricing updated: ${id} by user: ${req.user.id}`)
-    return successResponse(res, "Game pricing updated successfully", updatedGamePricing)
+    return successResponse(res, 'Game pricing updated successfully', updatedGamePricing)
   } catch (error) {
-    logger.error("Error updating game pricing:", error)
-    return errorResponse(res, "Failed to update game pricing", 500)
+    logger.error('Error updating game pricing:', error)
+    return errorResponse(res, 'Failed to update game pricing', 500)
   }
 }
 
@@ -126,15 +126,38 @@ exports.deleteGamePricing = async (req, res) => {
     })
 
     if (!gamePricing) {
-      return errorResponse(res, "Game pricing not found", 404)
+      return errorResponse(res, 'Game pricing not found', 404)
     }
 
     await GamePricing.destroy({ where: { id, club_id: req.user.club_id } })
 
     logger.info(`Game pricing deleted: ${id} by user: ${req.user.id}`)
-    return successResponse(res, "Game pricing deleted successfully")
+    return successResponse(res, 'Game pricing deleted successfully')
   } catch (error) {
-    logger.error("Error deleting game pricing:", error)
-    return errorResponse(res, "Failed to delete game pricing", 500)
+    logger.error('Error deleting game pricing:', error)
+    return errorResponse(res, 'Failed to delete game pricing', 500)
+  }
+}
+exports.getGameTypes = async (req, res) => {
+  try {
+    const gameTypes = await db.gameTypes.findAll({
+      attributes: ['id', 'name', 'pricing_type', 'description'],
+      order: [
+        ['name', 'ASC'], // Sorting by name in ascending order
+        // Alternatively use: ['id', 'DESC'] to sort by ID descending
+      ],
+    })
+
+    if (!gameTypes || gameTypes.length === 0) {
+      return errorResponse(res, 'Game types not found', 404)
+    }
+
+    return successResponse(res, 'Game types retrieved successfully', gameTypes)
+  } catch (error) {
+    logger.error('Error fetching game types:', {
+      error: error.message,
+      stack: error.stack,
+    })
+    return errorResponse(res, 'Failed to get game types', 500)
   }
 }

@@ -231,6 +231,7 @@ exports.getCurrentUser = async (req, res) => {
     if (req.userRole === 'manager' && userData.managed_clubs && userData.managed_clubs.length > 0) {
       // Assuming one manager manages one club (adjust if multiple clubs possible)
       userData.club = userData.managed_clubs[0].club
+      userData.club_id = userData.club.id
     }
 
     // Remove the intermediate association data if needed

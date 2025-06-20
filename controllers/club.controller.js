@@ -1,6 +1,6 @@
-const db = require("../models")
-const { successResponse, errorResponse } = require("../utils/responseHelper")
-const logger = require("../utils/logger")
+const db = require('../models')
+const { successResponse, errorResponse } = require('../utils/responseHelper')
+const logger = require('../utils/logger')
 
 // Create a new club
 exports.createClub = async (req, res) => {
@@ -13,14 +13,14 @@ exports.createClub = async (req, res) => {
       phone,
       email,
       description,
-      status: "active",
+      status: 'active',
     })
 
     logger.info(`Club created: ${club.id} by user: ${req.user.id}`)
-    return successResponse(res, "Club created successfully", club, 201)
+    return successResponse(res, 'Club created successfully', club, 201)
   } catch (error) {
-    logger.error("Error creating club:", error)
-    return errorResponse(res, "Failed to create club", 500)
+    logger.error('Error creating club:', error)
+    return errorResponse(res, 'Failed to create club', 500)
   }
 }
 
@@ -34,10 +34,10 @@ exports.getAllClubs = async (req, res) => {
     const { count, rows } = await db.clubs.findAndCountAll({
       limit: Number.parseInt(limit),
       offset: Number.parseInt(offset),
-      order: [["name", "ASC"]],
+      order: [['name', 'ASC']],
     })
-
-    return successResponse(res, "Clubs retrieved successfully", {
+    console.log(rows)
+    return successResponse(res, 'Clubs retrieved successfully', {
       clubs: rows,
       pagination: {
         total: count,
@@ -47,8 +47,8 @@ exports.getAllClubs = async (req, res) => {
       },
     })
   } catch (error) {
-    logger.error("Error getting clubs:", error)
-    return errorResponse(res, "Failed to get clubs", 500)
+    logger.error('Error getting clubs:', error)
+    return errorResponse(res, 'Failed to get clubs', 500)
   }
 }
 
@@ -60,13 +60,13 @@ exports.getClubById = async (req, res) => {
     const club = await db.clubs.findByPk(id)
 
     if (!club) {
-      return errorResponse(res, "Club not found", 404)
+      return errorResponse(res, 'Club not found', 404)
     }
 
-    return successResponse(res, "Club retrieved successfully", club)
+    return successResponse(res, 'Club retrieved successfully', club)
   } catch (error) {
-    logger.error("Error getting club:", error)
-    return errorResponse(res, "Failed to get club", 500)
+    logger.error('Error getting club:', error)
+    return errorResponse(res, 'Failed to get club', 500)
   }
 }
 
@@ -79,7 +79,7 @@ exports.updateClub = async (req, res) => {
     const club = await db.clubs.findByPk(id)
 
     if (!club) {
-      return errorResponse(res, "Club not found", 404)
+      return errorResponse(res, 'Club not found', 404)
     }
 
     await db.clubs.update(
@@ -91,16 +91,16 @@ exports.updateClub = async (req, res) => {
         description,
         status,
       },
-      { where: { id } },
+      { where: { id } }
     )
 
     const updatedClub = await db.clubs.findByPk(id)
 
     logger.info(`Club updated: ${id} by user: ${req.user.id}`)
-    return successResponse(res, "Club updated successfully", updatedClub)
+    return successResponse(res, 'Club updated successfully', updatedClub)
   } catch (error) {
-    logger.error("Error updating club:", error)
-    return errorResponse(res, "Failed to update club", 500)
+    logger.error('Error updating club:', error)
+    return errorResponse(res, 'Failed to update club', 500)
   }
 }
 
@@ -112,15 +112,15 @@ exports.deleteClub = async (req, res) => {
     const club = await db.clubs.findByPk(id)
 
     if (!club) {
-      return errorResponse(res, "Club not found", 404)
+      return errorResponse(res, 'Club not found', 404)
     }
 
     await db.clubs.destroy({ where: { id } })
 
     logger.info(`Club deleted: ${id} by user: ${req.user.id}`)
-    return successResponse(res, "Club deleted successfully")
+    return successResponse(res, 'Club deleted successfully')
   } catch (error) {
-    logger.error("Error deleting club:", error)
-    return errorResponse(res, "Failed to delete club", 500)
+    logger.error('Error deleting club:', error)
+    return errorResponse(res, 'Failed to delete club', 500)
   }
 }
